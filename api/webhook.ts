@@ -49,7 +49,13 @@ function parseIdentifier(url: string) {
 // runs, leaving the orphaned `[](...)` syntax as literal text. Unwrap
 // to the bare URL so Discord's auto-linker handles it normally.
 function unwrapLinearAutoLinks(text: string): string {
-	return text.replace(/\[\s*(https?:\/\/[^\s\]]+)\s*\]\(<?\1>?\)/g, '$1');
+	return text.replace(
+		/\[\s*(https?:\/\/[^\s\]]+)\s*\]\(<?\1>?\)/g,
+		(_match, url: string, offset: number, source: string) => {
+			const prev = offset > 0 ? source[offset - 1] : '';
+			return prev && !/\s/.test(prev) ? ` ${url}` : url;
+		}
+	);
 }
 
 function json(body: unknown, status = 200): Response {
