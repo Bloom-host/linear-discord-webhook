@@ -1,4 +1,4 @@
-import { AnyZodObject, z } from 'zod';
+import { z } from 'zod';
 
 export enum Action {
 	CREATE = 'create',
@@ -16,10 +16,10 @@ export const DATE_RESOLVABLE = z
 	.or(z.string())
 	.transform((arg) => new Date(arg));
 
-export function createModelSchema<T extends Model, C extends AnyZodObject>(
-	type: T,
-	commons: C
-) {
+export function createModelSchema<
+	T extends Model,
+	C extends z.ZodObject<z.ZodRawShape>
+>(type: T, commons: C) {
 	return z.object({
 		type: z.literal(type),
 		data: commons,
