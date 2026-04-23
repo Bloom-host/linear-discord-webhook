@@ -1,9 +1,10 @@
 {
 	"compilerOptions": {
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
 		"target": "ES2021",
-		"module": "CommonJS",
+		"module": "ESNext",
 		"lib": ["ES2021"],
+		"types": ["@cloudflare/workers-types", "node"],
 		"noImplicitAny": true,
 		"alwaysStrict": true,
 		"skipLibCheck": true,

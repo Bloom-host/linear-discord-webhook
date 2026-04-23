@@ -2,6 +2,12 @@ node_modules
 .DS_Store
 .vercel
 .output
+.wrangler
+.dev.vars
 
 .pnpm-debug.log*
 *.tsbuildinfo
+
+# This project uses pnpm; reject lockfiles from other package managers.
+package-lock.json
+yarn.lock
