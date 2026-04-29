@@ -8,7 +8,8 @@ export enum Action {
 
 export enum Model {
 	ISSUE = 'Issue',
-	COMMENT = 'Comment'
+	COMMENT = 'Comment',
+	PROJECT_UPDATE = 'ProjectUpdate'
 }
 
 export const DATE_RESOLVABLE = z

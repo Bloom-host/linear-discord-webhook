@@ -241,6 +241,41 @@ export default {
 
 					break;
 				}
+				case Model.PROJECT_UPDATE: {
+					if (body.action === Action.CREATE) {
+						const { user, project, body: text, health } = body.data;
+
+						const healthMeta = {
+							onTrack: { label: 'On track', color: 0x26b07b },
+							atRisk: { label: 'At risk', color: 0xf2c94c },
+							offTrack: { label: 'Off track', color: 0xeb5757 }
+						} as const;
+						const meta = health ? healthMeta[health] : null;
+
+						embed
+							.setTitle(project.name)
+							.setURL(body.url)
+							.setAuthor({ name: 'New project status update' })
+							.setColor(meta?.color ?? LINEAR_COLOR)
+							.setFooter({
+								text: user.name,
+								iconURL: user.avatarUrl ?? undefined
+							})
+							.setDescription(unwrapLinearAutoLinks(text));
+
+						if (meta) {
+							embed.addFields({
+								name: 'Health',
+								value: meta.label,
+								inline: true
+							});
+						}
+
+						shouldNotify = true;
+					}
+
+					break;
+				}
 			}
 
 			if (!shouldNotify) {
