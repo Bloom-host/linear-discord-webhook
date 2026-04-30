@@ -4,6 +4,7 @@ import { LinearClient } from '@linear/sdk';
 import { z, ZodError } from 'zod';
 import { HttpError } from '../lib/HttpError';
 import { SCHEMA } from '../lib/schema';
+import { isIssueComment } from '../lib/schema/comment';
 import { Action, Model } from '../lib/schema/utils';
 
 const DISCORD_WEBHOOKS_URL = 'https://discord.com/api/webhooks';
@@ -225,17 +226,31 @@ export default {
 				case Model.COMMENT: {
 					if (body.action === Action.CREATE) {
 						const user = await linear.user(body.data.userId);
-						const identifier = parseIdentifier(body.url);
 
 						embed
-							.setTitle(`${identifier} ${body.data.issue.title}`)
 							.setURL(body.url)
-							.setAuthor({ name: 'New comment' })
 							.setFooter({
 								text: user.name,
 								iconURL: user.avatarUrl ?? undefined
 							})
 							.setDescription(unwrapLinearAutoLinks(body.data.body));
+
+						if (isIssueComment(body.data)) {
+							// Issue URLs are .../issue/ABC-123/...; parseIdentifier
+							// pulls the ABC-123 segment for the title.
+							const identifier = parseIdentifier(body.url);
+							embed
+								.setTitle(`${identifier} ${body.data.issue.title}`)
+								.setAuthor({ name: 'New comment' });
+						} else {
+							// Project-update URLs don't carry an issue-style identifier;
+							// use the project name as the title instead. Health colors
+							// belong to the parent update, not its replies, so we keep
+							// LINEAR_COLOR (already set above).
+							embed
+								.setTitle(body.data.projectUpdate.project.name)
+								.setAuthor({ name: 'New comment on project update' });
+						}
 						shouldNotify = true;
 					}
 

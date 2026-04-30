@@ -4,7 +4,7 @@
 
 Receive Linear updates directly in your Discord channels.
 
-This is a Cloudflare Worker that ingests Linear webhooks (issue creates and issue comments) and forwards them into a Discord channel as embeds.
+This is a Cloudflare Worker that ingests Linear webhooks (issue creates, comments on issues and on project status updates, and project status updates themselves) and forwards them into a Discord channel as embeds.
 
 ## About this fork
 
@@ -73,7 +73,7 @@ Then register it in Linear:
 
 1. Go to **Linear → Settings → API → Webhooks**.
 2. Create a new webhook and paste the URL above into the **URL** field.
-3. Subscribe to the **Issues** and **Comments** event types.
+3. Subscribe to the **Issue**, **Comment**, and **Project update** event types. Comments on project status updates arrive under the same **Comment** event as issue comments — Linear distinguishes them via the parent in the payload, not via a separate event type.
 4. Copy the **signing secret** shown on the webhook detail page into the Worker via `wrangler secret put LINEAR_WEBHOOK_SECRET` (if you haven't already).
 
 ## Security checks
@@ -97,7 +97,7 @@ To opt in, set `NOTIFY_STATUS_CHANGES` to the literal string `"true"` as a Worke
 NOTIFY_STATUS_CHANGES = "true"
 ```
 
-Any other value (including unset) leaves status changes silently skipped. Only issue _creates_ and comment _creates_ fire Discord embeds in the default configuration.
+Any other value (including unset) leaves status changes silently skipped. In the default configuration, the events that fire Discord embeds are: issue _creates_, comment _creates_ (both on issues and on project status updates), and project-status-update _creates_.
 
 ## Local development
 
