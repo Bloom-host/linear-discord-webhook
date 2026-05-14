@@ -59,6 +59,14 @@ function unwrapLinearAutoLinks(text: string): string {
 	);
 }
 
+function cleanBlockquotes(text: string): string {
+	return text.replace(/^(?:>[\t ]*)+$/gm, '> ​');
+}
+
+function formatForDiscord(text: string): string {
+	return cleanBlockquotes(unwrapLinearAutoLinks(text));
+}
+
 function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
@@ -196,7 +204,7 @@ export default {
 
 						if (body.data.description) {
 							embed.setDescription(
-								unwrapLinearAutoLinks(body.data.description)
+								formatForDiscord(body.data.description)
 							);
 						}
 						shouldNotify = true;
@@ -233,7 +241,7 @@ export default {
 								text: user.name,
 								iconURL: user.avatarUrl ?? undefined
 							})
-							.setDescription(unwrapLinearAutoLinks(body.data.body));
+							.setDescription(formatForDiscord(body.data.body));
 
 						if (isIssueComment(body.data)) {
 							// Issue URLs are .../issue/ABC-123/...; parseIdentifier
@@ -276,7 +284,7 @@ export default {
 								text: user.name,
 								iconURL: user.avatarUrl ?? undefined
 							})
-							.setDescription(unwrapLinearAutoLinks(text));
+							.setDescription(formatForDiscord(text));
 
 						if (meta) {
 							embed.addFields({
