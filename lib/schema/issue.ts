@@ -6,7 +6,8 @@ const COMMONS = z.object({
 	title: z.string(),
 	description: z.string().optional(),
 	teamId: z.string().uuid(),
-	creatorId: z.string().uuid(),
+	creatorId: z.string().uuid().nullable().optional(),
+	botActor: z.string().nullable().optional(),
 	assignee: z
 		.object({
 			id: z.string().uuid()

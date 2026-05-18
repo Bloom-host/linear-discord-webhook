@@ -67,6 +67,34 @@ function formatForDiscord(text: string): string {
 	return cleanBlockquotes(unwrapLinearAutoLinks(text));
 }
 
+// Resolves who to show in the Discord embed footer for an issue event.
+// OAuth apps that use createAsUser set `data.botActor` (a JSON string) with
+// `userDisplayName` = the human-readable name passed to createAsUser.
+// Regular human actions have `data.creatorId` instead. `actor` is the top-level
+// webhook actor and is used as a last resort when neither field is present.
+async function resolveIssueFooter(
+	data: { creatorId?: string | null; botActor?: string | null },
+	actor: { name: string; avatarUrl?: string } | undefined,
+	linear: LinearClient
+): Promise<{ text: string; iconURL?: string } | null> {
+	if (data.botActor) {
+		const bot = JSON.parse(data.botActor) as {
+			userDisplayName?: string;
+			name?: string;
+		};
+		const name = bot.userDisplayName ?? bot.name;
+		if (name) return { text: name };
+	}
+	if (data.creatorId) {
+		const creator = await linear.user(data.creatorId);
+		return { text: creator.name, iconURL: creator.avatarUrl ?? undefined };
+	}
+	if (actor) {
+		return { text: actor.name, iconURL: actor.avatarUrl };
+	}
+	return null;
+}
+
 function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
@@ -171,18 +199,18 @@ export default {
 			switch (body.type) {
 				case Model.ISSUE: {
 					if (body.action === Action.CREATE) {
-						const creator = await linear.user(body.data.creatorId);
 						const identifier = parseIdentifier(body.url);
 						const teamUrl = `${LINEAR_BASE_URL}/team/${body.data.team.key}`;
 
 						embed
 							.setTitle(`${identifier} ${body.data.title}`)
 							.setURL(body.url)
-							.setAuthor({ name: 'New issue added' })
-							.setFooter({
-								text: creator.name,
-								iconURL: creator.avatarUrl ?? undefined
-							})
+							.setAuthor({ name: 'New issue added' });
+
+						const footer = await resolveIssueFooter(body.data, body.actor, linear);
+						if (footer) embed.setFooter(footer);
+
+						embed
 							.addFields(
 								{
 									name: 'Team',
@@ -213,7 +241,6 @@ export default {
 						body.action === Action.UPDATE &&
 						body.updatedFrom?.stateId
 					) {
-						const creator = await linear.user(body.data.creatorId);
 						const identifier = parseIdentifier(body.url);
 
 						embed
@@ -221,11 +248,10 @@ export default {
 							.setURL(body.url)
 							.setAuthor({ name: 'Status changed' })
 							.setColor(parseInt(body.data.state.color.replace('#', ''), 16))
-							.setFooter({
-								text: creator.name,
-								iconURL: creator.avatarUrl ?? undefined
-							})
 							.setDescription(`Status: **${body.data.state.name}**`);
+
+						const footer = await resolveIssueFooter(body.data, body.actor, linear);
+						if (footer) embed.setFooter(footer);
 						shouldNotify = true;
 					}
 

@@ -7,7 +7,13 @@ import { Action, DATE_RESOLVABLE } from './utils';
 const COMMONS = z.object({
 	action: z.enum([Action.CREATE, Action.UPDATE, Action.REMOVE]),
 	createdAt: DATE_RESOLVABLE,
-	url: z.string().url()
+	url: z.string().url(),
+	actor: z
+		.object({
+			name: z.string(),
+			avatarUrl: z.string().optional()
+		})
+		.optional()
 });
 
 export const SCHEMA = COMMONS.and(
