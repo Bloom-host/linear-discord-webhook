@@ -95,6 +95,58 @@ async function resolveIssueFooter(
 	return null;
 }
 
+// Agent sessions (Cursor/Codex/Claude coding agents) render as a dedicated
+// comment thread on an issue. The webhook payload carries no agent-session
+// marker (`botActor` only flags bot-authored comments and is absent on human
+// prompts inside the thread), so we ask the API instead. A comment is part of
+// a session thread if it or its thread root (threads are one level deep, so
+// `parent` is always the root) has an agentSession, or is the artificial root
+// Linear inserts for the thread.
+// Fails open: if the lookup errors we forward the comment rather than throw,
+// since a thrown error becomes a 4xx/5xx and Linear would retry the webhook.
+async function isAgentSessionComment(
+	commentId: string,
+	linear: LinearClient
+): Promise<boolean> {
+	try {
+		const data = await linear.client.request<
+			{
+				comment: {
+					agentSession: { id: string } | null;
+					isArtificialAgentSessionRoot: boolean;
+					parent: {
+						agentSession: { id: string } | null;
+						isArtificialAgentSessionRoot: boolean;
+					} | null;
+				} | null;
+			},
+			{ id: string }
+		>(
+			`query CommentAgentSession($id: String!) {
+				comment(id: $id) {
+					agentSession { id }
+					isArtificialAgentSessionRoot
+					parent {
+						agentSession { id }
+						isArtificialAgentSessionRoot
+					}
+				}
+			}`,
+			{ id: commentId }
+		);
+		const comment = data.comment;
+		return Boolean(
+			comment &&
+				(comment.agentSession ||
+					comment.isArtificialAgentSessionRoot ||
+					comment.parent?.agentSession ||
+					comment.parent?.isArtificialAgentSessionRoot)
+		);
+	} catch {
+		return false;
+	}
+}
+
 function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
@@ -259,6 +311,15 @@ export default {
 				}
 				case Model.COMMENT: {
 					if (body.action === Action.CREATE) {
+						// Agent sessions are issue-scoped; project-update comments can
+						// never belong to one, so skip the extra API call for those.
+						if (
+							isIssueComment(body.data) &&
+							(await isAgentSessionComment(body.data.id, linear))
+						) {
+							break; // shouldNotify stays false → "Event skipped."
+						}
+
 						const user = await linear.user(body.data.userId);
 
 						embed
